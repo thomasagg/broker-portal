@@ -1,0 +1,21 @@
+# the database lives on Neon (free, doesn't expire); Render only runs the app
+services:
+  - type: web
+    name: broker-portal
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /actuator/health
+    envVars:
+      # Neon's JDBC url, e.g. jdbc:postgresql://<host>/<db>?sslmode=require
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      # public demo: loads the demo brokers and underwriters on an empty database
+      - key: SPRING_PROFILES_ACTIVE
+        value: demo
