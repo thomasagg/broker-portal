@@ -134,7 +134,9 @@ export default function SubmissionPage() {
               <h2>{s.policyNumber ? `Policy ${s.policyNumber}` : 'Quote'}</h2>
               <div className="quote-premium">{money(s.quotedPremium, s.currency)}</div>
               <p className="muted small">
-                Valid until {date(s.quoteValidUntil)}
+                {s.policyNumber
+                  ? `Cover ${date(s.coverageStart)} – ${date(s.coverageEnd)}`
+                  : `Valid until ${date(s.quoteValidUntil)}`}
                 {s.status === 'QUOTED' && ` (${Math.max(daysUntil(s.quoteValidUntil!), 0)} days left)`}
               </p>
               {s.quoteTerms && <p>{s.quoteTerms}</p>}

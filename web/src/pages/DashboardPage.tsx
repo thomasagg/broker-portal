@@ -6,6 +6,8 @@ import { StatusPill, SubmissionTable } from '../components'
 import { daysUntil, duration, money, STATUS_LABEL } from '../labels'
 import type { Dashboard, Status } from '../types'
 
+const plural = (n: number) => `${n} submission${n === 1 ? '' : 's'}`
+
 const PIPELINE: Status[] = ['DRAFT', 'SUBMITTED', 'IN_REVIEW', 'INFO_REQUESTED', 'QUOTED', 'BIND_REQUESTED', 'BOUND', 'BOOKED']
 
 export default function DashboardPage() {
@@ -50,7 +52,7 @@ export default function DashboardPage() {
         <div className="card">
           <h2>Waiting on you</h2>
           <p className="muted small">Oldest first. These need your move before anything else can happen.</p>
-          <SubmissionTable rows={data.waitingOnMe} empty="Nothing waiting on you right now." />
+          <SubmissionTable rows={data.waitingOnMe} empty="Nothing waiting on you right now." compact />
         </div>
 
         <div className="stack">
@@ -88,14 +90,14 @@ export default function DashboardPage() {
                 <span className="kpi-label">
                   <StatusPill status="SUBMITTED" /> to <StatusPill status="QUOTED" />
                 </span>
-                <span className="muted small">{t.quotedSample} submissions</span>
+                <span className="muted small">{plural(t.quotedSample)}</span>
               </div>
               <div className="kpi">
                 <span className="kpi-value">{duration(t.submittedToBoundHours)}</span>
                 <span className="kpi-label">
                   <StatusPill status="SUBMITTED" /> to <StatusPill status="BOUND" />
                 </span>
-                <span className="muted small">{t.boundSample} submissions</span>
+                <span className="muted small">{plural(t.boundSample)}</span>
               </div>
             </div>
           </div>

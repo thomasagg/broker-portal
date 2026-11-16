@@ -35,8 +35,37 @@ export function Stepper({ status }: { status: Status }) {
   )
 }
 
-export function SubmissionTable({ rows, empty }: { rows: Submission[]; empty: string }) {
+// compact is for the dashboard cards: insured and reference share a cell, no line or broker columns
+export function SubmissionTable({ rows, empty, compact = false }: { rows: Submission[]; empty: string; compact?: boolean }) {
   if (rows.length === 0) return <p className="empty">{empty}</p>
+
+  if (compact) {
+    return (
+      <table className="table">
+        <tbody>
+          {rows.map((s) => (
+            <tr key={s.id}>
+              <td>
+                <Link to={`/submissions/${s.id}`} className="ref">
+                  {s.insuredName}
+                </Link>
+                <div className="muted small">
+                  {s.reference} · {LINE_LABEL[s.lineOfBusiness]}
+                  {` · ${s.brokerName}`}
+                </div>
+              </td>
+              <td>
+                <StatusPill status={s.status} />
+              </td>
+              <td className={`num ${s.daysInStatus >= 3 ? 'stale' : ''}`}>
+                {s.daysInStatus === 0 ? 'today' : `${s.daysInStatus} d`}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )
+  }
 
   return (
     <div className="table-wrap">

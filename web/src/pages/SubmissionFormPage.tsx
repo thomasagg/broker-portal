@@ -131,8 +131,9 @@ export default function SubmissionFormPage() {
           </label>
           <div className="row">
             <label {...field('insuredCountry')}>
-              {FIELD_LABEL.insuredCountry} * <span className="muted small">(ISO code)</span>
+              {FIELD_LABEL.insuredCountry} *
               <input
+                placeholder="2-letter code, e.g. GR"
                 value={form.insuredCountry ?? ''}
                 onChange={(e) => set('insuredCountry', e.target.value.toUpperCase())}
                 maxLength={2}
