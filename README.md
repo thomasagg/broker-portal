@@ -1,0 +1,104 @@
+# Broker Portal
+
+A portal where insurance brokers submit coverage requests and follow each one through its whole life, from draft to booked policy, while underwriters work the same submissions from their side.
+
+The goal is shorter turnaround from submission to policy. Most of the delay in broker business is back-and-forth: missing information, a quote nobody noticed, a bind request sitting in an inbox. Every feature below is aimed at one of those.
+
+## What it does
+
+**For brokers**
+- Create a submission, save it as a draft, and submit it when it's ready. The completeness check lists what's missing *before* it goes to underwriting, so nothing gets sent back for a missing date or sum insured.
+- See where every submission is on a lifecycle bar, and how long it has been in its current status.
+- Answer info requests by editing the submission and sending a note back.
+- Accept a quote (request to bind) or reject it, before it expires.
+- Copy a submission as a renewal: a new draft with the same answers and dates moved a year on.
+- Colleagues at the same brokerage see each other's submissions, so a sick day doesn't stall a deal.
+
+**For underwriters**
+- A queue of everything submitted. Starting a review assigns it to you, and other underwriters can no longer act on it.
+- Request info, quote (premium, valid-until, terms), decline, bind, and book the policy (the policy number follows the submission number).
+
+**For both**
+- A dashboard with the pipeline per status, a "waiting on you" list (oldest first), quotes expiring within 7 days, and the average turnaround (submitted → quoted, submitted → bound) over the last 90 days.
+- One timeline per submission with every status change, who made it, any notes, and messages between broker and underwriter.
+- Quotes past their date expire on their own (hourly job) and land in *Not taken up*.
+
+## Lifecycle
+
+```
+DRAFT ─submit─▶ SUBMITTED ─start review─▶ IN_REVIEW ─quote─▶ QUOTED ─request bind─▶ BIND_REQUESTED ─bind─▶ BOUND ─book─▶ BOOKED
+                                            │   ▲                │
+                               request info │   │ provide info   ├─reject / expires─▶ NOT_TAKEN_UP
+                                            ▼   │                │
+                                        INFO_REQUESTED           │
+Underwriter: decline (before quoting) ─▶ DECLINED
+Broker: withdraw (before bound) ─▶ WITHDRAWN        Underwriter: cancel (bound or booked) ─▶ CANCELLED
+```
+
+All the rules live in one enum, `SubmissionAction`: who can do it (role), which statuses it's allowed from, where it lands, and whether it needs a note. The API returns the `availableActions` for the person asking, so the web app shows the right buttons without repeating the rules.
+
+## Stack
+
+- **Backend:** Java 21, Spring Boot 4 (Spring MVC, Spring Data JPA/Hibernate, Spring Security as an OAuth2 resource server with HS256 JWTs), PostgreSQL, Flyway
+- **Frontend:** React 19 + TypeScript, Vite, React Router
+- **Tests:** JUnit 5, AssertJ, Mockito, MockMvc, Testcontainers (real PostgreSQL)
+- **Build/run:** Maven, Docker (one image serves the API and the web app), GitHub Actions CI
+
+## Running it
+
+Needs Java 21, Node 24 and Docker.
+
+The quickest way, the whole app with demo data on http://localhost:8080:
+
+```
+docker compose --profile app up --build
+```
+
+For development:
+
+```
+docker compose up -d                       # PostgreSQL on port 5434
+cd backend && ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
+cd web && npm install && npm run dev       # http://localhost:5173
+```
+
+Demo accounts (password `demo1234`):
+
+| Email | Who |
+|---|---|
+| maria@aegean.example | Broker, Aegean Insurance Brokers |
+| nikos@aegean.example | Broker, Aegean Insurance Brokers |
+| eleni@northern.example | Broker, Northern Risk Partners |
+| anna@insurer.example | Underwriter |
+| george@insurer.example | Underwriter |
+
+Tests (Docker must be running for Testcontainers):
+
+```
+cd backend && ./mvnw verify
+```
+
+## API
+
+| Method | Path | |
+|---|---|---|
+| POST | `/api/auth/login` | email + password → JWT |
+| GET | `/api/auth/me` | current user |
+| GET | `/api/dashboard` | counts, waiting on me, expiring quotes, turnaround |
+| GET | `/api/submissions?status=&q=` | list, scoped to the brokerage for brokers |
+| POST | `/api/submissions` | new draft (brokers) |
+| GET | `/api/submissions/{id}` | submission + timeline + messages |
+| PUT | `/api/submissions/{id}` | edit a draft or answer an info request (brokers) |
+| POST | `/api/submissions/{id}/actions` | `{ "action": "QUOTE", "premium": 9750, "validUntil": "2026-12-31" }` |
+| POST | `/api/submissions/{id}/messages` | message on the submission |
+| POST | `/api/submissions/{id}/copy` | new draft from this one, a year later (brokers) |
+
+Errors use RFC 9457 problem details. Submitting an incomplete draft returns 422 with `missingFields`. Two people changing the same submission at once get a 409 (optimistic locking on `version`).
+
+## Next
+
+- Document upload (schedules, loss runs, proposal forms) attached to submissions and info requests
+- Email notifications when a submission changes status or gets a message
+- SLA targets per line of business, with overdue highlighting
+- Endorsements and mid-term changes on booked policies
+- Integration with the policy admin system for booking, instead of generating the policy number here
