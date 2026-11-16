@@ -11,5 +11,17 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
 
+  # the full app on http://localhost:8080 with demo data: docker compose --profile app up --build
+  app:
+    profiles: [app]
+    build: .
+    depends_on: [db]
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      SPRING_PROFILES_ACTIVE: demo
+    ports:
+      - "8080:8080"
+
 volumes:
   db-data:
