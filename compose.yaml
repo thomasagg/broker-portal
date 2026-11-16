@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: brokerportal
+      POSTGRES_USER: brokerportal
+      POSTGRES_PASSWORD: brokerportal
+    # 5434 so it doesn't clash with other local Postgres instances
+    ports:
+      - "5434:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+volumes:
+  db-data:
