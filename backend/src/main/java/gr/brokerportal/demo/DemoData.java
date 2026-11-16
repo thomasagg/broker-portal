@@ -80,7 +80,8 @@ class DemoData implements ApplicationRunner {
         new Story(maria, details(LineOfBusiness.CYBER, "Olympus Dental Clinics", "Healthcare", 800_000,
                 "Six clinics sharing one patient system, backups offsite daily."), 9)
                 .act(anna, SubmissionAction.START_REVIEW, null, 8)
-                .act(anna, SubmissionAction.REQUEST_INFO, "Do you have MFA on remote access? Please attach the last pen test summary.", 7);
+                .act(anna, SubmissionAction.REQUEST_INFO, "Do you have MFA on remote access? Please attach the last pen test summary.", 7)
+                .message(maria, "Checking with their IT provider, back to you tomorrow.", 6);
 
         new Story(nikos, details(LineOfBusiness.GENERAL_LIABILITY, "Kastra Events Ltd", "Event organising", 1_200_000,
                 "Concerts up to 3,000 people, outdoor venues in Northern Greece."), 12)
@@ -143,9 +144,11 @@ class DemoData implements ApplicationRunner {
 
         Story act(User actor, SubmissionAction action, String note, int daysAgo) {
             events.save(submission.perform(actor, ActionRequest.of(action, note), day(daysAgo), daysAgo(daysAgo)));
-            if (note != null && action == SubmissionAction.REQUEST_INFO) {
-                messages.save(new SubmissionMessage(submission, actor, note, daysAgo(daysAgo)));
-            }
+            return this;
+        }
+
+        Story message(User author, String body, int daysAgo) {
+            messages.save(new SubmissionMessage(submission, author, body, daysAgo(daysAgo)));
             return this;
         }
 
