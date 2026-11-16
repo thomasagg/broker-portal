@@ -62,8 +62,8 @@ public enum SubmissionAction {
         return needsNote;
     }
 
-    // always there for brokers, so it shouldn't count as "waiting on you"
-    public boolean isEscapeHatch() {
-        return this == WITHDRAW || this == CANCEL;
+    // being able to decline or withdraw doesn't mean the ball is in your court
+    public boolean closesSubmission() {
+        return target.isClosed();
     }
 }

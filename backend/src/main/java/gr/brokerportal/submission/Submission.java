@@ -159,6 +159,9 @@ public class Submission {
 
     public SubmissionEvent perform(User actor, ActionRequest request, LocalDate today, Instant now) {
         SubmissionAction action = request.action();
+        if (actor.isUnderwriter() && underwriter != null && !underwriter.getId().equals(actor.getId())) {
+            throw new ActionNotAllowedException(underwriter.getFullName() + " is handling this submission");
+        }
         if (!canPerform(action, actor)) {
             throw new ActionNotAllowedException("You can't " + action.name().toLowerCase().replace('_', ' ')
                     + " a submission that is " + status.name().toLowerCase().replace('_', ' '));

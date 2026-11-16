@@ -143,7 +143,8 @@ class SubmissionApiTest {
                 .containsExactly("REQUEST_INFO", "QUOTE", "DECLINE");
 
         assertThat(action(george, id, "{\"action\": \"QUOTE\", \"premium\": 1, \"validUntil\": \"%s\"}"
-                .formatted(START))).hasStatus(HttpStatus.CONFLICT);
+                .formatted(START))).hasStatus(HttpStatus.CONFLICT)
+                .bodyJson().extractingPath("$.detail").isEqualTo("Anna Ioannou is handling this submission");
 
         assertThat(action(anna, id, """
                 {"action": "QUOTE", "premium": 9750.00, "validUntil": "%s", "terms": "EUR 2,500 deductible"}
@@ -231,6 +232,11 @@ class SubmissionApiTest {
                 .bodyJson().extractingPath("$.waitingOnMe[*].id").asArray().contains(id);
 
         action(anna, id, "{\"action\": \"START_REVIEW\"}");
+        action(anna, id, "{\"action\": \"REQUEST_INFO\", \"note\": \"Claims history please\"}");
+        // only decline is left for anna, that's not her move
+        assertThat(mvc.get().uri("/api/dashboard").header("Authorization", anna))
+                .bodyJson().extractingPath("$.waitingOnMe[*].id").asArray().doesNotContain(id);
+        action(maria, id, "{\"action\": \"PROVIDE_INFO\", \"note\": \"None in 5 years\"}");
         action(anna, id, """
                 {"action": "QUOTE", "premium": 3200, "validUntil": "%s"}
                 """.formatted(LocalDate.now().plusDays(3)));

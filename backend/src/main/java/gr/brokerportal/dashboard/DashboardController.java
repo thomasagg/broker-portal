@@ -67,7 +67,7 @@ class DashboardController {
         List<SubmissionResponse> pipeline = service.list(me, open, null);
 
         List<SubmissionResponse> waitingOnMe = pipeline.stream()
-                .filter(s -> s.availableActions().stream().anyMatch(a -> !a.isEscapeHatch()))
+                .filter(s -> s.availableActions().stream().anyMatch(a -> !a.closesSubmission()))
                 // oldest first: whatever has waited longest goes on top
                 .sorted((a, b) -> a.statusChangedAt().compareTo(b.statusChangedAt()))
                 .toList();
