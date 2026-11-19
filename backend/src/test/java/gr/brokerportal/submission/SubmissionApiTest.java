@@ -107,6 +107,15 @@ class SubmissionApiTest {
     }
 
     @Test
+    void countryMustBeATwoLetterCode() {
+        assertThat(mvc.post().uri("/api/submissions").header("Authorization", maria)
+                .contentType(MediaType.APPLICATION_JSON).content("""
+                        {"lineOfBusiness": "CYBER", "insuredName": "Olympus Dental", "insuredCountry": "G"}
+                        """))
+                .hasStatus(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
     void submittingAnIncompleteDraftListsTheMissingFields() {
         String id = create(maria, """
                 {"lineOfBusiness": "CYBER", "insuredName": "Olympus Dental"}

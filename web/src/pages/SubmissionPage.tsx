@@ -10,6 +10,7 @@ import {
   daysUntil,
   DESTRUCTIVE,
   FIELD_LABEL,
+  isoDay,
   LINE_LABEL,
   money,
   NEEDS_NOTE,
@@ -26,7 +27,10 @@ export default function SubmissionPage() {
   const [pending, setPending] = useState<Action | null>(null)
 
   useEffect(() => {
+    // a different submission starts clean, no half-filled action form or old error
     setData(null)
+    setError(null)
+    setPending(null)
     api
       .submission(id)
       .then(setData)
@@ -39,6 +43,9 @@ export default function SubmissionPage() {
   const s = data.submission
   const isBroker = user.role === 'BROKER'
   const canEdit = isBroker && (s.status === 'DRAFT' || s.status === 'INFO_REQUESTED')
+  // the hourly job closes expired quotes; until it runs, don't offer a bind the API will refuse
+  const quoteExpired = s.status === 'QUOTED' && s.quoteValidUntil != null && daysUntil(s.quoteValidUntil) < 0
+  const actions = s.availableActions.filter((a) => !(a === 'REQUEST_BIND' && quoteExpired))
 
   async function run(action: Action, extra: Record<string, unknown> = {}) {
     setError(null)
@@ -60,8 +67,13 @@ export default function SubmissionPage() {
   }
 
   async function copy() {
-    const created = await api.copy(id)
-    navigate(`/submissions/${created.submission.id}/edit`)
+    setError(null)
+    try {
+      const created = await api.copy(id)
+      navigate(`/submissions/${created.submission.id}/edit`)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not copy the submission')
+    }
   }
 
   // status changes and messages read as one conversation
@@ -104,10 +116,10 @@ export default function SubmissionPage() {
         <Stepper status={s.status} />
       </div>
 
-      {s.availableActions.length > 0 && (
+      {actions.length > 0 && (
         <div className="card actions-card">
           <div className="actions">
-            {s.availableActions.map((a) => (
+            {actions.map((a) => (
               <button
                 key={a}
                 className={`button ${DESTRUCTIVE.includes(a) ? 'danger' : a === pending ? 'primary' : 'primary-soft'}`}
@@ -126,6 +138,7 @@ export default function SubmissionPage() {
           {error && <p className="error">{error}</p>}
         </div>
       )}
+      {error && actions.length === 0 && <p className="error">{error}</p>}
 
       <div className="grid-2">
         <div className="stack">
@@ -137,7 +150,8 @@ export default function SubmissionPage() {
                 {s.policyNumber
                   ? `Cover ${date(s.coverageStart)} – ${date(s.coverageEnd)}`
                   : `Valid until ${date(s.quoteValidUntil)}`}
-                {s.status === 'QUOTED' && ` (${Math.max(daysUntil(s.quoteValidUntil!), 0)} days left)`}
+                {s.status === 'QUOTED' &&
+                  (quoteExpired ? ' (expired)' : ` (${daysUntil(s.quoteValidUntil!)} days left)`)}
               </p>
               {s.quoteTerms && <p>{s.quoteTerms}</p>}
             </div>
@@ -217,11 +231,7 @@ function ActionForm({
 }) {
   const [note, setNote] = useState('')
   const [premium, setPremium] = useState('')
-  const [validUntil, setValidUntil] = useState(() => {
-    const d = new Date()
-    d.setDate(d.getDate() + 30)
-    return d.toISOString().slice(0, 10)
-  })
+  const [validUntil, setValidUntil] = useState(() => isoDay(30))
   const [terms, setTerms] = useState('')
 
   function submit(e: FormEvent) {
@@ -241,7 +251,7 @@ function ActionForm({
           </label>
           <label className="field">
             Valid until
-            <input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} required />
+            <input type="date" min={isoDay()} value={validUntil} onChange={(e) => setValidUntil(e.target.value)} required />
           </label>
         </div>
       )}
@@ -274,14 +284,19 @@ function ActionForm({
 function MessageBox({ onSend }: { onSend: (body: string) => Promise<void> }) {
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!body.trim()) return
     setBusy(true)
+    setError(null)
     try {
       await onSend(body)
       setBody('')
+    } catch (err) {
+      // keep what they typed so nothing is lost
+      setError(err instanceof Error ? err.message : 'Message not sent')
     } finally {
       setBusy(false)
     }
@@ -299,6 +314,7 @@ function MessageBox({ onSend }: { onSend: (body: string) => Promise<void> }) {
       <button className="button primary" disabled={busy || !body.trim()}>
         Send
       </button>
+      {error && <p className="error">{error}</p>}
     </form>
   )
 }

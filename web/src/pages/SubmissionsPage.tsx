@@ -28,11 +28,17 @@ export default function SubmissionsPage() {
   const q = params.get('q') ?? ''
 
   useEffect(() => {
+    // typing fires a request per key; only the latest one may fill the table
+    let current = true
     setRows(null)
+    setError(null)
     api
       .submissions(statusKey ? (statusKey.split(',') as Status[]) : [], q)
-      .then(setRows)
-      .catch((e) => setError(e.message))
+      .then((r) => current && setRows(r))
+      .catch((e) => current && setError(e.message))
+    return () => {
+      current = false
+    }
   }, [statusKey, q])
 
   function pick(next: Status[]) {
@@ -79,7 +85,11 @@ export default function SubmissionsPage() {
       </div>
       {error && <p className="error">{error}</p>}
       <div className="card">
-        {rows ? <SubmissionTable rows={rows} empty="No submissions match." /> : <p className="muted">Loading…</p>}
+        {rows ? (
+          <SubmissionTable rows={rows} empty="No submissions match." />
+        ) : (
+          !error && <p className="muted">Loading…</p>
+        )}
       </div>
     </>
   )

@@ -85,9 +85,23 @@ export function money(amount: number | null, currency: string | null = 'EUR') {
   }).format(amount)
 }
 
+// "2026-12-31" read as midnight local time; new Date() would read it as UTC and show
+// the day before anywhere west of Greenwich
+function localDay(value: string) {
+  const [y, m, d] = value.slice(0, 10).split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+// a date input's value for today + n days, in local time
+export function isoDay(plusDays = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + plusDays)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 export function date(value: string | null) {
   if (!value) return '—'
-  return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  return localDay(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export function dateTime(value: string) {
@@ -108,5 +122,5 @@ export function duration(hours: number | null) {
 export function daysUntil(value: string) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  return Math.round((new Date(value).getTime() - today.getTime()) / 86_400_000)
+  return Math.round((localDay(value).getTime() - today.getTime()) / 86_400_000)
 }

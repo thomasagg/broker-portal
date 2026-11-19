@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
 import { api, ApiError } from '../api'
 import { FIELD_LABEL, LINE_LABEL } from '../labels'
 import type { LineOfBusiness, SubmissionDetails } from '../types'
@@ -34,12 +34,14 @@ function clean(d: SubmissionDetails): SubmissionDetails {
 export default function SubmissionFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [form, setForm] = useState<SubmissionDetails>(EMPTY)
   const [status, setStatus] = useState<string | null>(null)
   const [missing, setMissing] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [loaded, setLoaded] = useState(!id)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -60,7 +62,7 @@ export default function SubmissionFormPage() {
       setStatus(s.status)
       setMissing(s.missingFields)
       setLoaded(true)
-    })
+    }, (e) => setLoadError(e instanceof Error ? e.message : 'Could not load the submission'))
   }, [id])
 
   function set<K extends keyof SubmissionDetails>(key: K, value: SubmissionDetails[K]) {
@@ -84,7 +86,7 @@ export default function SubmissionFormPage() {
           if (err instanceof ApiError && err.missingFields.length > 0) {
             setMissing(err.missingFields)
             setError('Saved as draft. Fill in the highlighted fields to submit.')
-            if (!id) navigate(`/submissions/${savedId}/edit`, { replace: true })
+            if (!id) navigate(`/submissions/${savedId}/edit`, { replace: true, state: { savedAsDraft: true } })
             return
           }
           throw err
@@ -103,6 +105,7 @@ export default function SubmissionFormPage() {
     save(status !== 'INFO_REQUESTED')
   }
 
+  if (loadError) return <p className="error">{loadError}</p>
   if (!loaded) return <p className="muted">Loading…</p>
 
   const field = (key: keyof SubmissionDetails) => ({
@@ -229,6 +232,9 @@ export default function SubmissionFormPage() {
         </div>
       </div>
 
+      {(error || location.state?.savedAsDraft) && missing.length > 0 && (
+        <p className="hint">{error ?? 'Saved as draft. Fill in the highlighted fields to submit.'}</p>
+      )}
       {missing.length > 0 && (
         <p className="error">Still missing: {missing.map((m) => FIELD_LABEL[m] ?? m).join(', ')}</p>
       )}

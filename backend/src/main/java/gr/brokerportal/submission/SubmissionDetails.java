@@ -13,7 +13,8 @@ import jakarta.validation.constraints.Size;
 public record SubmissionDetails(
         @NotNull LineOfBusiness lineOfBusiness,
         @NotBlank @Size(max = 200) String insuredName,
-        @Size(max = 2) String insuredCountry,
+        // ISO 3166 two-letter code; "G" used to slip through and pass the completeness check
+        @Pattern(regexp = "[A-Za-z]{2}") String insuredCountry,
         @Size(max = 100) String insuredIndustry,
         @Positive BigDecimal annualRevenue,
         @Positive BigDecimal sumInsured,
